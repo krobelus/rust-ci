@@ -19,6 +19,6 @@ RUN set -eux; \
     cargo +nightly --version >> /etc/rust-versions; \
     rustc +nightly --version >> /etc/rust-versions; \
     cargo tarpaulin --version >> /etc/rust-versions; \
-    chmod -R a+w $RUSTUP_HOME $CARGO_HOME;
+    chmod -R a+rwX $RUSTUP_HOME $CARGO_HOME;
 
 USER circleci
