@@ -8,6 +8,5 @@ jobs:
       - setup_remote_docker:
           docker_layer_caching: true
       - run: |
-          docker build -t jixone/rust-ci:$CIRCLE_BRANCH .
           docker login -u $DOCKER_USER -p $DOCKER_PASS
-          docker push jixone/rust-ci:$CIRCLE_BRANCH
+          bash build_and_push.sh

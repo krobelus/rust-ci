@@ -1,4 +1,50 @@
-FROM circleci/buildpack-deps:bionic as check-lrat
+FROM circleci/rust:1.34.1-stretch as rust-stable
+USER root
+
+RUN chmod -R a+rwX $RUSTUP_HOME $CARGO_HOME
+
+USER circleci
+
+
+
+FROM rust-stable as rust-nightly
+USER root
+
+RUN rustup toolchain install nightly; \
+    chmod -R a+rwX $RUSTUP_HOME $CARGO_HOME
+
+USER circleci
+
+
+
+FROM rust-stable as rust-stable-musl
+USER root
+
+RUN set -eux; \
+    apt-get install -y musl musl-dev musl-tools; \
+    rustup target add x86_64-unknown-linux-musl; \
+    chmod -R a+rwX $RUSTUP_HOME $CARGO_HOME
+
+USER circleci
+
+
+
+FROM rust-stable as rust-stable-mingw
+USER root
+
+RUN set -eux; \
+    apt-get install -y gcc-mingw-w64-x86-64; \
+    echo '[target.x86_64-pc-windows-gnu]' >> $CARGO_HOME/config; \
+    echo 'linker = "x86_64-w64-mingw32-gcc"' >> $CARGO_HOME/config; \
+    echo 'ar = "x86_64-w64-mingw32-gcc-ar"' >> $CARGO_HOME/config; \
+    rustup target add x86_64-pc-windows-gnu; \
+    chmod -R a+rwX $RUSTUP_HOME $CARGO_HOME
+
+USER circleci
+
+
+
+FROM circleci/buildpack-deps:stretch as check-lrat
 USER root
 
 RUN set -eux; \
@@ -22,7 +68,9 @@ RUN set -eux; \
     echo -e '(include-book "projects/sat/lrat/incremental/run" :dir :system)\n:q\n(save-exec "/usr/local/bin/check-clrat" nil :host-lisp-args "--dynamic-space-size 240000")' | ../saved_acl2; \
     echo installed check-lrat
 
-FROM circleci/buildpack-deps:bionic as kcov
+
+
+FROM circleci/buildpack-deps:stretch as kcov
 USER root
 
 RUN set -eux; \
@@ -37,7 +85,9 @@ RUN set -eux; \
     make DESTDIR=/install install; \
     echo installed kcov
 
-FROM circleci/buildpack-deps:bionic as drat-trim
+
+
+FROM circleci/buildpack-deps:stretch as drat-trim
 USER root
 
 RUN set -eux; \
@@ -47,42 +97,12 @@ RUN set -eux; \
     cp drat-trim /usr/local/bin/; \
     echo installed drat-trim
 
-FROM circleci/buildpack-deps:bionic
+
+
+FROM circleci/buildpack-deps:stretch as varisat-tests
 USER root
 
-ENV RUSTUP_HOME=/usr/local/rustup \
-    CARGO_HOME=/usr/local/cargo \
-    PATH=/usr/local/cargo/bin:$PATH
-
-RUN set -eux; \
-    curl https://sh.rustup.rs -sSf > rustup-init; \
-    chmod +x rustup-init; \
-    ./rustup-init -y --no-modify-path --default-toolchain stable; \
-    rm rustup-init; \
-    chmod -R a+rwX $RUSTUP_HOME $CARGO_HOME; \
-    echo installed rust
-
-RUN set -eux; \
-    rustup toolchain install nightly; \
-    chmod -R a+rwX $RUSTUP_HOME $CARGO_HOME; \
-    echo installed rust nightly
-
-RUN set -eux; \
-    apt-get install -y musl musl-dev musl-tools; \
-    rustup target add x86_64-unknown-linux-musl; \
-    chmod -R a+rwX $RUSTUP_HOME $CARGO_HOME; \
-    echo installed rust musl target
-
-RUN set -eux; \
-    apt-get install -y gcc-mingw-w64-x86-64; \
-    echo '[target.x86_64-pc-windows-gnu]' >> $CARGO_HOME/config; \
-    echo 'linker = "x86_64-w64-mingw32-gcc"' >> $CARGO_HOME/config; \
-    echo 'ar = "x86_64-w64-mingw32-gcc-ar"' >> $CARGO_HOME/config; \
-    rustup target add x86_64-pc-windows-gnu; \
-    chmod -R a+rwX $RUSTUP_HOME $CARGO_HOME; \
-    echo installed rust windows target
-
-RUN apt-get install -y cmake binutils-dev libelf-dev libdw1
+RUN apt-get install -y libdw1
 
 COPY --from=kcov \
     /install/ \
