@@ -44,6 +44,20 @@ USER circleci
 
 
 
+FROM rust-stable as build-mdbook
+USER root
+
+RUN cargo install mdbook
+
+
+
+FROM rust-stable as mdbook
+
+COPY --from=build-mdbook /usr/local/cargo/bin/mdbook /usr/local/cargo/bin/mdbook
+
+
+
+
 FROM circleci/buildpack-deps:stretch as check-lrat
 USER root
 
