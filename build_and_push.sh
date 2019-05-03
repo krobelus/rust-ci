@@ -1,13 +1,20 @@
 #!/bin/bash
 
-set -eu
+ORDER=$(
+    for FILE in *.Dockerfile; do
+        echo ${FILE%.*} ${FILE%.*};
+        sed "s/^# dep /${FILE%.*} /;t;d" $FILE;
+    done | tsort | tac
+)
 
-CACHING=()
 
-for STEP in $(sed 's/FROM .* as \(.*\)/\1/;t;d' < Dockerfile); do
-    docker pull jixone/rust-ci:$STEP || true
-    CACHING=(${CACHING[@]} --cache-from jixone/rust-ci:$STEP)
+for IMAGE in $ORDER; do
+    echo $IMAGE
+    CACHE=$(sed "s/^# dep /jixone\/rust-ci:/;t;d" $IMAGE.Dockerfile | tr '\n' ',')jixone/rust-ci:$IMAGE
 
-    docker build --target $STEP ${CACHING[@]} -t jixone/rust-ci:$STEP .
-    docker push jixone/rust-ci:$STEP
+    docker pull jixone/rust-ci:$IMAGE  || true
+
+    docker build --cache-from $CACHE -t jixone/rust-ci:$IMAGE -f $IMAGE.Dockerfile .
+
+    docker push jixone/rust-ci:$IMAGE
 done
