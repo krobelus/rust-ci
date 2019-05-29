@@ -20,4 +20,6 @@ COPY --from=jixone/rust-ci:check-lrat \
 
 COPY --from=jixone/rust-ci:drat-trim /usr/local/bin/drat-trim /usr/local/bin/
 
+COPY --from=jixone/rust-ci:rate /usr/local/cargo/bin/rate /usr/local/bin/
+
 USER circleci
